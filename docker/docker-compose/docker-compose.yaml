@@ -1,0 +1,72 @@
+version: '1.0.0'
+services:
+  jenkins:
+    # Container 이름
+    container_name: jenkins
+    # image 이름
+    image: jenkins/jenkins:jdk11
+    # volume 할당
+    volumes:
+      - ./jenkins:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock ubuntu/jenkins_home
+      - /usr/bin/docker:/usr/bin/docker
+    ports:
+      - '8080:8080'
+      - '50000:50000'
+    environment:
+      - TZ=Asia/Seoul
+    user: root
+    networks:
+      - pipeline_network
+      - logging_network
+
+  nginx:
+    container_name: nginx
+    image: nginx
+    build: ./nginx
+    restart: always
+    #외부와 소통하는 경우에는 ports로 포트 설정.
+    ports:
+      - '443:443'
+      - '80:80'
+    volumes:
+      #docker-compose.yml과 같은 레벨에 둔 nginx.conf를 mount.
+      # - ./nginx/config/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/config/bad_bot.conf:/etc/nginx/conf.d/bad_bot.conf
+      - ./image:/home/bongtire/admin/image
+      # - ./nginx/ssl/import.crt:/etc/nginx/ssl/import.crt
+      # - ./nginx/ssl/import.key:/etc/nginx/ssl/import.key
+    networks:
+      - application_network
+    environment:
+      - TZ=Asia/Seoul
+  mysql:
+    image: mysql:8.0
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: '000000'
+      MYSQL_USER: 'devdubu'
+      MYSQL_PASSWORD: ''
+      MYSQL_DATABASE: 'devdubu'
+    networks:
+      - application_network
+
+  admin-front:
+    image: ghcr.io/devdubu/bongtire_admin
+    restart: always
+    ports:
+      - '3000:3000'
+    volumes:
+      - './image:/app/image'
+    networks:
+      - application_network
+
+networks:
+  # pipeline 전용 private network
+  pipeline_network:
+    driver: bridge
+  logging_network:
+    driver: bridge
+  application_network:
+    driver: bridge
