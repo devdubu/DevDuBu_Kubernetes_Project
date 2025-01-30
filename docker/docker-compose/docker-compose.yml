@@ -41,6 +41,8 @@ services:
         max-file: '10'
     networks:
       - logging_network
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
   jenkins:
     # Container 이름
     container_name: jenkins
