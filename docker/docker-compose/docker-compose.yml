@@ -3,7 +3,6 @@ services:
   prometheus:
     image: prom/prometheus
     restart: unless-stopped
-    network_mode: 'host'
     user: root
     ports:
       - 9090:9090
@@ -18,7 +17,10 @@ services:
       - --web.console.libraries=/usr/share/prometheus/console_libraries
       - --web.console.templates=/usr/share/proemtheus/consoles
       - --web.enable-admin-api
-
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - logging_network
   grafana:
     container_name: grafana
     image: grafana
@@ -41,8 +43,7 @@ services:
         max-file: '10'
     networks:
       - logging_network
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
+
   jenkins:
     # Container 이름
     container_name: jenkins
