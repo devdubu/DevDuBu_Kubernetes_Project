@@ -3,6 +3,7 @@ services:
   prometheus:
     image: prom/prometheus
     restart: unless-stopped
+    user: root
     ports:
       - 9090:9090
     volumes:
@@ -23,6 +24,7 @@ services:
     container_name: grafana
     image: grafana
     build: ./grafana
+    user: root
     restart: unless-stopped
     ports:
       - 3000:3000
@@ -38,7 +40,6 @@ services:
       options:
         max-size: '8m'
         max-file: '10'
-    user: '1000'
     networks:
       - logging_network
   jenkins:
