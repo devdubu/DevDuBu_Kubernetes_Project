@@ -1,49 +1,5 @@
-version: '2.3.0'
+version: '3.0.0'
 services:
-  prometheus:
-    image: prom/prometheus
-    restart: unless-stopped
-    user: root
-    ports:
-      - 9090:9090
-    volumes:
-      - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
-      - ./prometheus:/prometheus
-    command:
-      - --config.file=/etc/prometheus/prometheus.yaml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=90d # 90일보다 오래된 metrics는 삭제
-      - --storage.tsdb.retention.size=10GB # 10GB를 넘을 시 오래된 metrics 삭제
-      - --web.console.libraries=/usr/share/prometheus/console_libraries
-      - --web.console.templates=/usr/share/proemtheus/consoles
-      - --web.enable-admin-api
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    networks:
-      - logging_network
-  grafana:
-    container_name: grafana
-    image: grafana
-    build: ./grafana
-    user: root
-    restart: unless-stopped
-    ports:
-      - 3000:3000
-    volumes:
-      - ./grafana:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin # grafana 사용자 이름
-      - GF_SECURITY_ADMIN_PASSWORD=admin # grafana 사용자 비밀번호
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-clock-panel
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '8m'
-        max-file: '10'
-    networks:
-      - logging_network
-
   jenkins:
     # Container 이름
     container_name: jenkins
@@ -65,6 +21,70 @@ services:
       - pipeline_network
       - logging_network
 
+  nginx:
+    container_name: nginx
+    image: nginx
+    build: ./nginx
+    restart: always
+    #외부와 소통하는 경우에는 ports로 포트 설정.
+    ports:
+      - '443:443'
+      - '80:80'
+    volumes:
+      #docker-compose.yml과 같은 레벨에 둔 nginx.conf를 mount.
+      - ./nginx/config/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/config/bad_bot.conf:/etc/nginx/conf.d/bad_bot.conf
+      - ./image:/home/image
+      # - ./nginx/ssl/import.crt:/etc/nginx/ssl/import.crt
+      # - ./nginx/ssl/import.key:/etc/nginx/ssl/import.key
+    networks:
+      - application_network
+      - pipeline_network
+      - logging_network
+    environment:
+      - TZ=Asia/Seoul
+  prometheus:
+    image: prom/prometheus
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ./prometheus:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=90d # 90일보다 오래된 metrics는 삭제
+      - --storage.tsdb.retention.size=10GB # 10GB를 넘을 시 오래된 metrics 삭제
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/proemtheus/consoles
+      - --web.enable-admin-api
+    networks:
+      - logging_network
+
+  grafana:
+    container_name: grafana
+    image: grafana
+    build: ./grafana
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin # grafana 사용자 이름
+      - GF_SECURITY_ADMIN_PASSWORD=admin # grafana 사용자 비밀번호
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '8m'
+        max-file: '10'
+    user: '1000'
+    networks:
+      - logging_network
+
 networks:
   # pipeline 전용 private network
   pipeline_network:
@@ -73,5 +93,3 @@ networks:
     driver: bridge
   application_network:
     driver: bridge
-  host_network:
-    driver: host
